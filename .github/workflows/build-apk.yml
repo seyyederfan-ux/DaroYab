@@ -50,9 +50,9 @@ jobs:
           mkdir -p $DEST
           cp android-patch/ir/daroyab/app/SslBypassPlugin.java $DEST/
           MAIN=$(find android/app/src/main/java -name MainActivity.java)
-          grep -q SslBypassPlugin $MAIN || sed -i 's|import com.getcapacitor.BridgeActivity;|import com.getcapacitor.BridgeActivity;\nimport ir.daroyab.app.SslBypassPlugin;|' $MAIN
-          grep -q 'registerPlugin(SslBypassPlugin' $MAIN || sed -i 's|super.onCreate(savedInstanceState);|super.onCreate(savedInstanceState);\n        registerPlugin(SslBypassPlugin.class);|' $MAIN
-          grep -n 'SslBypassPlugin' $MAIN
+          PKG=$(grep -oP '(?<=^package )[\w.]+' $MAIN | head -1)
+          printf 'package %s;\n\nimport android.os.Bundle;\nimport com.getcapacitor.BridgeActivity;\nimport ir.daroyab.app.SslBypassPlugin;\n\npublic class MainActivity extends BridgeActivity {\n  @Override\n  public void onCreate(Bundle savedInstanceState) {\n    super.onCreate(savedInstanceState);\n    registerPlugin(SslBypassPlugin.class);\n  }\n}\n' "$PKG" > $MAIN
+          cat $MAIN
 
       - name: Build Debug APK
         run: |
