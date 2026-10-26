@@ -1,0 +1,23 @@
+{
+  "appId": "ir.daroyab.app",
+  "appName": "دارویاب",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#0D9488",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "backgroundColor": "#0D9488",
+      "style": "DARK",
+      "overlaysWebView": false
+    }
+  }
+}
