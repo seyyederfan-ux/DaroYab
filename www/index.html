@@ -632,6 +632,13 @@
 
     function nativeHttp(url, opts) {
       opts = opts || {};
+      // 1) SslBypass native plugin (trusts gov cert) — only for TTAC host
+      if (url.indexOf('irc.fda.gov.ir') > -1 && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SslBypass) {
+        return window.Capacitor.Plugins.SslBypass.fetchText({ url: url }).then(function (r) {
+          return { status: r.status, data: r.data };
+        });
+      }
+      // 2) CapacitorHttp
       if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp) {
         var method = (opts.method || 'GET').toUpperCase();
         return window.Capacitor.Plugins.CapacitorHttp[method.toLowerCase()]({
