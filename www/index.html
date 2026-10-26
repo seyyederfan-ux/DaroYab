@@ -625,9 +625,10 @@
     }
 
     // --- TTAC (سازمان غذا و دارو) direct fetch from device ---
-    // Device is in Iran → irc.fda.gov.ir is reachable. CapacitorHttp bypasses CORS.
-    var TTAC_SEARCH = 'https://irc.fda.gov.ir/api/Drug/SearchDrug';
-    var TTAC_HTML   = 'https://irc.fda.gov.ir/Home/DrugSearch';
+    // REAL endpoints (verified from open-source scrapers of irc.fda.gov.ir):
+    //   Search: /nfi/Search?Term=X&PageNumber=1&PageSize=50   (HTML, .RowSearchSty rows)
+    //   Row: .titleSearch-Link-RtlAlter a = fa name + /NFI/Detail/{id}, .titleSearch-Link-ltrAlter a = en, .priceTxt = price (Rial)
+    var TTAC_SEARCH = 'https://irc.fda.gov.ir/nfi/Search';
 
     function nativeHttp(url, opts) {
       opts = opts || {};
@@ -635,66 +636,59 @@
         var method = (opts.method || 'GET').toUpperCase();
         return window.Capacitor.Plugins.CapacitorHttp[method.toLowerCase()]({
           url: url,
-          headers: Object.assign({'User-Agent': 'Mozilla/5.0 (Linux; Android 13)', 'Accept': 'application/json, text/html'}, opts.headers || {}),
-          data: opts.body || undefined,
-          readTimeout: 15000,
-          connectTimeout: 15000
+          headers: Object.assign({
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Mobile Safari/537.36',
+            'Accept': 'text/html,application/json'
+          }, opts.headers || {}),
+          readTimeout: 20000,
+          connectTimeout: 20000
         });
       }
-      // browser fallback (CORS may block TTAC, but Worker path handles that)
       return fetch(url, opts).then(function (r) { return r.text().then(function (t) { return { status: r.status, data: t }; }); });
     }
 
-    function ttacNormalize(rows) {
-      return (Array.isArray(rows) ? rows : []).map(function (raw, idx) {
-        var faName = raw.Cn || raw.FaName || raw.name || raw.drugName || '';
-        var enName = raw.En || raw.EnName || raw.englishName || '';
-        var irc = String(raw.Gtin || raw.IRC || raw.barcode || '').trim() || '0000000000000000';
-        var priceRial = parseFloat(raw.Price ?? raw.price ?? raw.ConsumerPrice ?? 0);
-        var packPrice = Math.round(priceRial / 10); // Rial → Toman
-        var cnt = parseInt(raw.PackageCount || raw.packCount || 0, 10);
-        var unitPrice = cnt > 0 ? Math.round(packPrice / cnt) : packPrice;
-        var form = /شربت|قوطی|سوسپانسیون|قطره/.test(faName) ? 'syrup' : /ویال|آمپول|تزریقی/.test(faName) ? 'ampoule' : /کپسول|ژل/.test(faName) ? 'capsule' : 'tablet';
-        var formLabel = {tablet:'قرص خوراکی', capsule:'کپسول خوراکی', syrup:'شربت/سوسپانسیون', ampoule:'ویال/آمپول تزریقی'}[form];
-        var rx = !/استامینوفن|acetaminophen|ژلوفن|ibuprofen|ستیریزین|cetirizine|ویتامین|vitamin/.test((faName+' '+enName).toLowerCase());
-        return {
-          id: 10000 + idx, faName: faName, enName: enName || faName,
-          category: 'all', form: form, formLabel: formLabel,
-          manufacturer: raw.Manufacture || raw.manufacturer || raw.Company || 'نامشخص',
-          packPrice: packPrice, unitPrice: unitPrice,
-          packDesc: faName || 'جعبه کامل',
-          unitDesc: form === 'syrup' ? 'هر شیشه' : 'هر عدد',
-          insuranceRate: rx ? 0.7 : 0.0, rxRequired: rx, ircCode: irc,
-          priceTrend: 'stable', trendText: 'نرخ مصوب سازمان غذا و دارو'
-        };
-      }).filter(function (m) { return m.faName && m.packPrice > 0; });
+    function ttacNormalize(faName, enName, priceRial, detailId, manufacturer, idx) {
+      var pr = parseFloat(String(priceRial || '').replace(/[^\d.]/g, ''));
+      var packPrice = isFinite(pr) ? Math.round(pr / 10) : 0; // Rial → Toman
+      var form = /شربت|قوطی|سوسپانسیون|قطره/.test(faName) ? 'syrup' : /ویال|آمپول|تزریقی/.test(faName) ? 'ampoule' : /کپسول|ژل/.test(faName) ? 'capsule' : 'tablet';
+      var formLabel = { tablet: 'قرص خوراکی', capsule: 'کپسول خوراکی', syrup: 'شربت/سوسپانسیون', ampoule: 'ویال/آمپول تزریقی' }[form];
+      var rx = !/استامینوفن|acetaminophen|ژلوفن|ibuprofen|ستیریزین|cetirizine|ویتامین|vitamin|دیفن/.test((faName + ' ' + enName).toLowerCase());
+      return {
+        id: 10000 + idx, faName: faName, enName: enName || faName,
+        category: 'all', form: form, formLabel: formLabel,
+        manufacturer: manufacturer || 'نامشخص',
+        packPrice: packPrice, unitPrice: packPrice,
+        packDesc: 'قیمت مصرف‌کننده (نرخ مصوب)',
+        unitDesc: 'هر بسته',
+        insuranceRate: rx ? 0.7 : 0.0, rxRequired: rx,
+        ircCode: detailId ? String(detailId) : '0000000000000000',
+        priceTrend: 'stable', trendText: 'نرخ مصوب سازمان غذا و دارو'
+      };
     }
 
     async function fetchFromTtac(query) {
-      if (!query) return [];
+      if (!query || query.length < 2) return [];
+      var url = TTAC_SEARCH + '?Term=' + encodeURIComponent(query) + '&PageNumber=1&PageSize=30';
+      var resp = await nativeHttp(url);
+      var htmlStr = typeof resp.data === 'string' ? resp.data : '';
+      if (!htmlStr || resp.status !== 200) return [];
+      var doc = new DOMParser().parseFromString(htmlStr, 'text/html');
+      var rows = doc.querySelectorAll('.RowSearchSty');
       var out = [];
-      // strategy 1: JSON API
-      try {
-        var r1 = await nativeHttp(TTAC_SEARCH + '?term=' + encodeURIComponent(query) + '&pageSize=50&pageIndex=0');
-        var parsed = typeof r1.data === 'string' ? JSON.parse(r1.data) : r1.data;
-        var rows = Array.isArray(parsed) ? parsed : (parsed && (parsed.Data || parsed.data || parsed.rows || parsed.Rows)) || [];
-        out = ttacNormalize(rows);
-      } catch (e) {}
-      // strategy 2: HTML scrape
-      if (!out.length) {
-        try {
-          var r2 = await nativeHttp(TTAC_HTML + '?searchTerm=' + encodeURIComponent(query), {headers:{'Accept':'text/html'}});
-          var htmlStr = typeof r2.data === 'string' ? r2.data : '';
-          var rows2 = [];
-          var trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi, m;
-          while ((m = trRe.exec(htmlStr)) !== null) {
-            var tds = Array.from(m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map(function (t) { return t[1].replace(/<[^>]+>/g, '').trim(); });
-            if (tds.length >= 4) rows2.push({ Cn: tds[0], En: tds[1], Manufacture: tds[2], Price: tds[3], Gtin: tds[4] || '' });
-          }
-          out = ttacNormalize(rows2);
-        } catch (e) {}
-      }
-      return out;
+      rows.forEach(function (row, idx) {
+        var faA = row.querySelector('.titleSearch-Link-RtlAlter a');
+        var enA = row.querySelector('.titleSearch-Link-ltrAlter a');
+        var price = row.querySelector('.priceTxt');
+        var href = faA ? (faA.getAttribute('href') || '') : '';
+        var m = href.match(/Detail\/(\d+)/);
+        out.push(ttacNormalize(
+          (faA ? faA.textContent : '').trim(),
+          (enA ? enA.textContent : '').trim(),
+          price ? price.textContent : '0',
+          m ? m[1] : null, '', idx
+        ));
+      });
+      return out.filter(function (x) { return x.faName && x.packPrice > 0; });
     }
 
     async function fetchMedicines(query) {
@@ -726,6 +720,7 @@
           return results;
         }
       } catch (e) {}
+      if (query) showToast('از سامانه سازمان غذا و دارو نتیجه‌ای برای «' + query + '» نیامد');
       // 3) offline cache → 4) built-in
       var cached = lsGet(LS_KEYS.cache, null);
       if (cached && Array.isArray(cached.medicines) && cached.medicines.length) {
