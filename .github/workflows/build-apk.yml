@@ -44,6 +44,26 @@ jobs:
           grep -q 'usesCleartextTraffic' $MAN || sed -i '0,/<application/s//<application\n        android:usesCleartextTraffic="true"/' $MAN
           grep -o 'usesCleartextTraffic="true"' $MAN
 
+      - name: Install SslBypass plugin (trust gov cert)
+        run: |
+          DEST=android/app/src/main/java/ir/daroyab/app
+          mkdir -p $DEST
+          cp android-patch/ir/daroyab/app/SslBypassPlugin.java $DEST/
+          MAIN=$(find android/app/src/main/java -name MainActivity.java)
+          cat $MAIN
+          python3 - <<'PYEOF'
+import re, glob
+p = glob.glob('android/app/src/main/java/**/MainActivity.java', recursive=True)[0]
+s = open(p).read()
+if 'SslBypassPlugin' not in s:
+    s = s.replace('import com.getcapacitor.BridgeActivity;',
+                  'import com.getcapacitor.BridgeActivity;\nimport ir.daroyab.app.SslBypassPlugin;')
+    s = s.replace('super.onCreate(savedInstanceState);',
+                  'super.onCreate(savedInstanceState);\n        registerPlugin(SslBypassPlugin.class);')
+    open(p,'w').write(s)
+print("MainActivity patched")
+PYEOF
+
       - name: Build Debug APK
         run: |
           cd android
