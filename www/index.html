@@ -624,35 +624,118 @@
       container.innerHTML = skeletonCards(6);
     }
 
+    // --- TTAC (سازمان غذا و دارو) direct fetch from device ---
+    // Device is in Iran → irc.fda.gov.ir is reachable. CapacitorHttp bypasses CORS.
+    var TTAC_SEARCH = 'https://irc.fda.gov.ir/api/Drug/SearchDrug';
+    var TTAC_HTML   = 'https://irc.fda.gov.ir/Home/DrugSearch';
+
+    function nativeHttp(url, opts) {
+      opts = opts || {};
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CapacitorHttp) {
+        var method = (opts.method || 'GET').toUpperCase();
+        return window.Capacitor.Plugins.CapacitorHttp[method.toLowerCase()]({
+          url: url,
+          headers: Object.assign({'User-Agent': 'Mozilla/5.0 (Linux; Android 13)', 'Accept': 'application/json, text/html'}, opts.headers || {}),
+          data: opts.body || undefined,
+          readTimeout: 15000,
+          connectTimeout: 15000
+        });
+      }
+      // browser fallback (CORS may block TTAC, but Worker path handles that)
+      return fetch(url, opts).then(function (r) { return r.text().then(function (t) { return { status: r.status, data: t }; }); });
+    }
+
+    function ttacNormalize(rows) {
+      return (Array.isArray(rows) ? rows : []).map(function (raw, idx) {
+        var faName = raw.Cn || raw.FaName || raw.name || raw.drugName || '';
+        var enName = raw.En || raw.EnName || raw.englishName || '';
+        var irc = String(raw.Gtin || raw.IRC || raw.barcode || '').trim() || '0000000000000000';
+        var priceRial = parseFloat(raw.Price ?? raw.price ?? raw.ConsumerPrice ?? 0);
+        var packPrice = Math.round(priceRial / 10); // Rial → Toman
+        var cnt = parseInt(raw.PackageCount || raw.packCount || 0, 10);
+        var unitPrice = cnt > 0 ? Math.round(packPrice / cnt) : packPrice;
+        var form = /شربت|قوطی|سوسپانسیون|قطره/.test(faName) ? 'syrup' : /ویال|آمپول|تزریقی/.test(faName) ? 'ampoule' : /کپسول|ژل/.test(faName) ? 'capsule' : 'tablet';
+        var formLabel = {tablet:'قرص خوراکی', capsule:'کپسول خوراکی', syrup:'شربت/سوسپانسیون', ampoule:'ویال/آمپول تزریقی'}[form];
+        var rx = !/استامینوفن|acetaminophen|ژلوفن|ibuprofen|ستیریزین|cetirizine|ویتامین|vitamin/.test((faName+' '+enName).toLowerCase());
+        return {
+          id: 10000 + idx, faName: faName, enName: enName || faName,
+          category: 'all', form: form, formLabel: formLabel,
+          manufacturer: raw.Manufacture || raw.manufacturer || raw.Company || 'نامشخص',
+          packPrice: packPrice, unitPrice: unitPrice,
+          packDesc: faName || 'جعبه کامل',
+          unitDesc: form === 'syrup' ? 'هر شیشه' : 'هر عدد',
+          insuranceRate: rx ? 0.7 : 0.0, rxRequired: rx, ircCode: irc,
+          priceTrend: 'stable', trendText: 'نرخ مصوب سازمان غذا و دارو'
+        };
+      }).filter(function (m) { return m.faName && m.packPrice > 0; });
+    }
+
+    async function fetchFromTtac(query) {
+      if (!query) return [];
+      var out = [];
+      // strategy 1: JSON API
+      try {
+        var r1 = await nativeHttp(TTAC_SEARCH + '?term=' + encodeURIComponent(query) + '&pageSize=50&pageIndex=0');
+        var parsed = typeof r1.data === 'string' ? JSON.parse(r1.data) : r1.data;
+        var rows = Array.isArray(parsed) ? parsed : (parsed && (parsed.Data || parsed.data || parsed.rows || parsed.Rows)) || [];
+        out = ttacNormalize(rows);
+      } catch (e) {}
+      // strategy 2: HTML scrape
+      if (!out.length) {
+        try {
+          var r2 = await nativeHttp(TTAC_HTML + '?searchTerm=' + encodeURIComponent(query), {headers:{'Accept':'text/html'}});
+          var htmlStr = typeof r2.data === 'string' ? r2.data : '';
+          var rows2 = [];
+          var trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi, m;
+          while ((m = trRe.exec(htmlStr)) !== null) {
+            var tds = Array.from(m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map(function (t) { return t[1].replace(/<[^>]+>/g, '').trim(); });
+            if (tds.length >= 4) rows2.push({ Cn: tds[0], En: tds[1], Manufacture: tds[2], Price: tds[3], Gtin: tds[4] || '' });
+          }
+          out = ttacNormalize(rows2);
+        } catch (e) {}
+      }
+      return out;
+    }
+
     async function fetchMedicines(query) {
-      // network-first with cache fallback, then built-in MEDICINES
+      // 1) our Worker  2) direct TTAC from device  3) cache  4) built-in
       var url = API_BASE + '/api/medicines?category=' + encodeURIComponent(state.selectedCategory);
       if (query) url += '&q=' + encodeURIComponent(query);
-
+      var results = [];
       try {
         var ctrl = new AbortController();
         var t = setTimeout(function () { ctrl.abort(); }, 8000);
         var res = await fetch(url, { signal: ctrl.signal });
         clearTimeout(t);
         var data = await res.json();
-        if (data.ok && Array.isArray(data.medicines) && data.medicines.length > 0) {
-          liveMedicines = data.medicines;
-          lsSet(LS_KEYS.cache, { ts: Date.now(), medicines: data.medicines });
-          return data.medicines;
+        if (data.ok && Array.isArray(data.medicines)) {
+          results = data.medicines;
+          if (results.length) {
+            liveMedicines = results;
+            lsSet(LS_KEYS.cache, { ts: Date.now(), medicines: results });
+            return results;
+          }
         }
-        throw new Error('empty');
-      } catch (e) {
-        // offline → localStorage cache → built-in fallback
-        var cached = lsGet(LS_KEYS.cache, null);
-        if (cached && Array.isArray(cached.medicines) && cached.medicines.length) {
-          return cached.medicines.filter(med => matchFilter(med, query));
+      } catch (e) {}
+      // 2) direct TTAC from the device (Iran network)
+      try {
+        results = await fetchFromTtac(query);
+        if (results.length) {
+          liveMedicines = results;
+          lsSet(LS_KEYS.cache, { ts: Date.now(), medicines: results });
+          return results;
         }
-        return MEDICINES.filter(med => matchFilter(med, query));
+      } catch (e) {}
+      // 3) offline cache → 4) built-in
+      var cached = lsGet(LS_KEYS.cache, null);
+      if (cached && Array.isArray(cached.medicines) && cached.medicines.length) {
+        return cached.medicines.filter(function (med) { return matchFilter(med, query); });
       }
+      return MEDICINES.filter(function (med) { return matchFilter(med, query); });
     }
 
     function matchFilter(med, query) {
-      var matchesCat = state.selectedCategory === 'all' || med.category === state.selectedCategory;
+      var matchesCat = state.selectedCategory === 'all' || med.category === state.selectedCategory || med.category === 'all';
       var q = (query || '').toLowerCase();
       var matchesQuery = !q ||
         med.faName.toLowerCase().includes(q) ||
