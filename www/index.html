@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>دارویاب | استعلام قیمت مصوب دارو و اطلاعات دارویی</title>
+  
+  <!-- Google Fonts: Vazirmatn (Persian UI) & JetBrains Mono (Codes / Generic names) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Vazirmatn', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            teal: {
+              50: '#F0FDFA',
+              100: '#CCFBF1',
+              400: '#2DD4BF',
+              500: '#14B8A6',
+              600: '#0D9488',
+              700: '#0F766E',
+              900: '#134E4A',
+            },
+            emerald: {
+              500: '#10B981',
+              600: '#059669',
+            }
+          },
+          boxShadow: {
+            'phone': '0 25px 60px -15px rgba(15, 23, 42, 0.35), 0 0 0 12px #1E293B, 0 0 0 14px #334155',
+            'phone-dark': '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 12px #0F172A, 0 0 0 14px #1E293B',
+            'glass': '0 8px 32px 0 rgba(13, 148, 136, 0.12)',
+            'float': '0 10px 25px -5px rgba(13, 148, 136, 0.3)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Native App feel & smooth scrolling */
+    html, body {
+      font-family: 'Vazirmatn', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      overscroll-behavior: none;
+    }
+    
+    /* Hide scrollbars completely */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Sheet animations */
+    .sheet-enter {
+      transform: translateY(0%);
+      opacity: 1;
+    }
+    .sheet-exit {
+      transform: translateY(105%);
+      opacity: 0;
+    }
+
+    /* Subtle pulse animation for status badge */
+    @keyframes softPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.6; }
+    }
+    .live-dot {
+      animation: softPulse 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-200 dark:bg-slate-950 flex items-center justify-center min-h-screen sm:p-4 text-slate-800 dark:text-slate-100 antialiased selection:bg-teal-500 selection:text-white transition-colors duration-300">
+
+  <!-- ========================================== -->
+  <!-- MOBILE DEVICE BEZEL CONTAINER              -->
+  <!-- (bezel removed in native WebView — see isNative()) -->
+  <!-- ========================================== -->
+  <div id="device-frame" class="relative w-full h-screen sm:h-[860px] sm:max-w-[412px] bg-[#F8FAFC] dark:bg-[#0B0F19] sm:rounded-[44px] overflow-hidden flex flex-col shadow-2xl sm:shadow-phone dark:sm:shadow-phone-dark transition-all duration-300 border-0 sm:border border-slate-300/40 dark:border-slate-800">
+
+    <!-- SMARTPHONE STATUS BAR & NOTCH (hidden in native WebView) -->
+    <div id="fake-statusbar" class="pt-3 px-7 pb-1 flex items-center justify-between shrink-0 z-30 select-none">
+      <!-- Time (Persian Digits) -->
+      <span class="text-xs font-bold tracking-tight text-slate-700 dark:text-slate-300 font-mono">۰۹:۴۱</span>
+
+      <!-- Dynamic Island / Speaker Pill -->
+      <div class="h-4 w-24 bg-slate-900 dark:bg-black rounded-full flex items-center justify-end px-2 gap-1.5 shadow-inner">
+        <span class="w-2 h-2 rounded-full bg-slate-800 dark:bg-slate-900 border border-slate-700/60"></span>
+        <span class="w-1.5 h-1.5 rounded-full bg-teal-500/60"></span>
+      </div>
+
+      <!-- Battery, Wifi & Signal Icons -->
+      <div class="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+        <!-- Signal -->
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="2" y="16" width="3" height="6" rx="0.5"/>
+          <rect x="7" y="12" width="3" height="10" rx="0.5"/>
+          <rect x="12" y="8" width="3" height="14" rx="0.5"/>
+          <rect x="17" y="4" width="3" height="18" rx="0.5"/>
+        </svg>
+        <!-- Wifi -->
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12 18.75h.007v.008H12v-.008z"/>
+        </svg>
+        <!-- Battery -->
+        <div class="w-5 h-2.5 rounded-sm border border-slate-600 dark:border-slate-400 p-0.5 flex items-center">
+          <div class="h-full w-3.5 bg-slate-700 dark:bg-slate-300 rounded-[1px]"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP APP BAR -->
+    <header class="px-4 pt-1 pb-2.5 flex items-center justify-between shrink-0 z-20 bg-[#F8FAFC]/90 dark:bg-[#0B0F19]/90 backdrop-blur-md">
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#0D9488] to-[#10B981] flex items-center justify-center text-white shadow-md shadow-teal-500/20">
+          <!-- Capsule + Medical Cross Icon -->
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 20.5L3.5 13.5C1.5 11.5 1.5 8 3.5 6C5.5 4 9 4 11 6L18 13C20 15 20 18.5 18 20.5C16 22.5 12.5 22.5 10.5 20.5Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 17L14.5 9.5" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4M17 5h4" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-lg font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-l from-slate-900 to-teal-700 dark:from-white dark:to-teal-300">دارویاب</h1>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">مرجع استعلام نرخ رسمی و مصوب داروها</p>
+        </div>
+      </div>
+
+      <!-- Left Actions: Live Sync Status + Theme Toggle -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot"></span>
+          <span>بروزرسانی: امروز</span>
+        </div>
+
+        <!-- Dark/Light Mode Button -->
+        <button 
+          onclick="toggleTheme()" 
+          class="w-9 h-9 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200/90 dark:border-white/10 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:border-teal-500 transition-all active:scale-90 shadow-sm"
+          title="تغییر پوسته تاریک/روشن"
+        >
+          <!-- Sun Icon (Hidden in Light) -->
+          <svg class="hidden dark:block w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+          <!-- Moon Icon (Visible in Light) -->
+          <svg class="block dark:hidden w-4 h-4 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- MAIN SCROLLABLE APP BODY                   -->
+    <!-- ========================================== -->
+    <main id="main-content" class="flex-1 overflow-y-auto no-scrollbar pb-24">
+      
+      <!-- ---------------------------------------- -->
+      <!-- VIEW 1: HOME & DRUG SEARCH (تب جستجو و نرخ) -->
+      <!-- ---------------------------------------- -->
+      <section id="view-home" class="space-y-3">
+        
+        <!-- Sticky Full-Width Search & Categories -->
+        <div class="sticky top-0 z-20 bg-[#F8FAFC]/95 dark:bg-[#0B0F19]/95 backdrop-blur-md pt-1 pb-2.5 px-4 border-b border-slate-200/60 dark:border-white/[0.06]">
+          
+          <!-- Full-Width Search Bar -->
+          <div class="relative w-full">
+            <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.3-4.3"/>
+              </svg>
+            </div>
+            
+            <input 
+              id="search-input" 
+              type="text" 
+              oninput="handleSearchDebounced(this.value)"
+              placeholder="جستجوی نام فارسی، انگلیسی یا کد IRC دارو..." 
+              class="w-full pr-10 pl-9 py-2.5 text-xs font-medium bg-white dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 rounded-2xl border border-slate-200/90 dark:border-white/[0.08] focus:outline-none focus:border-teal-500 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-500/15 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm"
+            />
+
+            <!-- Clear Search Button -->
+            <button 
+              id="clear-search-btn" 
+              onclick="clearSearch()" 
+              class="hidden absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <span class="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs">✕</span>
+            </button>
+          </div>
+
+          <!-- Horizontal Scrollable Category Chips -->
+          <div id="category-chips" class="flex items-center gap-2 overflow-x-auto no-scrollbar pt-3 pb-0.5">
+            <!-- Dynamically populated via JS -->
+          </div>
+        </div>
+
+        <!-- Quick Stats / Legal Notice Banner -->
+        <div class="px-4">
+          <div class="p-3 rounded-2xl bg-gradient-to-l from-teal-500/10 via-emerald-500/5 to-transparent border border-teal-500/20 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">سازمان غذا و دارو (TTAC)</p>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400">قیمت‌ها مصوب کمیسیون قانونی قیمت‌گذاری کشور است</p>
+              </div>
+            </div>
+            <span id="results-count" class="text-xs font-black text-teal-700 dark:text-teal-300 font-mono px-2 py-0.5 rounded-lg bg-white/80 dark:bg-slate-800/80 shadow-sm border border-slate-200/50 dark:border-white/5">
+              ۱۲ مورد
+            </span>
+          </div>
+        </div>
+
+        <!-- Medicine Price Cards Container -->
+        <div id="medicine-list" class="px-4 py-1 space-y-2.5">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+      </section>
+
+      <!-- ---------------------------------------- -->
+      <!-- VIEW 2: SAVED / FAVORITES (داروهای من)    -->
+      <!-- ---------------------------------------- -->
+      <section id="view-saved" class="hidden px-4 pt-2 space-y-3">
+        
+        <div class="p-3.5 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-black text-slate-800 dark:text-white">داروهای نشان‌شده من</h2>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">رصد نرخ مصوب و دسترسی سریع به اقلام پرتکرار</p>
+          </div>
+          <div class="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Saved Cards List -->
+        <div id="saved-medicines-list" class="space-y-2.5">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- FLOATING GLASSMORPHIC BOTTOM NAVIGATION    -->
+    <!-- ========================================== -->
+    <nav class="absolute bottom-3 inset-x-6 z-30 h-16 rounded-3xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/90 dark:border-white/10 shadow-glass px-3 flex items-center justify-around gap-2">
+      
+      <!-- Tab 1: Home & Search -->
+      <button onclick="switchTab('home')" id="nav-home" class="nav-btn flex-1 h-12 rounded-2xl flex items-center justify-center gap-2 text-teal-600 dark:text-teal-400 bg-teal-500/10 font-bold transition-all active:scale-95">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
+        </svg>
+        <span class="text-xs">جستجو و نرخ داروها</span>
+      </button>
+
+      <!-- Tab 2: Saved / My Meds -->
+      <button onclick="switchTab('saved')" id="nav-saved" class="nav-btn relative flex-1 h-12 rounded-2xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 font-medium transition-all active:scale-95">
+        <div class="relative flex items-center">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+          </svg>
+          <span id="nav-saved-badge" class="absolute -top-2 -right-3 min-w-[16px] h-[16px] px-1 rounded-full bg-teal-600 text-white text-[9px] font-bold flex items-center justify-center">۴</span>
+        </div>
+        <span class="text-xs">داروهای من</span>
+      </button>
+
+    </nav>
+
+    <!-- ========================================== -->
+    <!-- SLIDE-UP DRUG DETAIL BOTTOM SHEET          -->
+    <!-- ========================================== -->
+    <div id="detail-backdrop" onclick="closeDetailSheet()" class="hidden absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-sm transition-opacity opacity-0"></div>
+    
+    <div id="detail-sheet" class="sheet-exit absolute bottom-0 inset-x-0 z-50 bg-white dark:bg-[#111827] rounded-t-[32px] border-t border-slate-200 dark:border-white/10 shadow-2xl transition-all duration-300 ease-out max-h-[85%] flex flex-col">
+      <!-- Drag Handle -->
+      <div class="pt-3 pb-1 flex justify-center shrink-0 cursor-pointer" onclick="closeDetailSheet()">
+        <div class="w-11 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+      </div>
+
+      <!-- Sheet Content -->
+      <div id="detail-sheet-content" class="px-5 pb-6 pt-2 overflow-y-auto no-scrollbar space-y-4">
+        <!-- Dynamically populated by openDetailSheet() -->
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- NON-INTRUSIVE TOAST NOTIFICATION           -->
+    <!-- ========================================== -->
+    <div id="toast" class="pointer-events-none opacity-0 translate-y-4 transition-all duration-300 absolute bottom-20 inset-x-6 z-50 bg-slate-900/95 dark:bg-teal-950/95 text-white px-4 py-2.5 rounded-2xl shadow-xl border border-white/10 flex items-center justify-between text-xs font-semibold">
+      <div class="flex items-center gap-2">
+        <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">✓</span>
+        <span id="toast-message">در داروهای من ذخیره شد</span>
+      </div>
+      <span class="text-[10px] text-teal-300 font-bold">دارویاب</span>
+    </div>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- APPLICATION JAVASCRIPT & DATA ARCHITECTURE -->
+  <!-- ========================================== -->
+  <script>
+    // 1. PERSIAN DIGIT & CURRENCY FORMATTERS
+    const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+
+    function toPersianNum(num) {
+      if (num === null || num === undefined) return '';
+      return num.toString().replace(/\d/g, x => persianDigits[parseInt(x, 10)]);
+    }
+
+    function formatPrice(amount) {
+      if (typeof amount !== 'number') return toPersianNum(amount);
+      const formatted = Math.round(amount).toLocaleString('en-US');
+      return toPersianNum(formatted);
+    }
+
+    // 2. CATEGORIES
+    const CATEGORIES = [
+      { id: 'all', name: 'همه داروها' },
+      { id: 'analgesic', name: 'مسکن و ضدالتهاب' },
+      { id: 'antibiotic', name: 'آنتی‌بیوتیک' },
+      { id: 'cardio', name: 'قلبی و عروقی' },
+      { id: 'gastro', name: 'گوارشی' },
+      { id: 'supplement', name: 'مکمل و ویتامین' }
+    ];
+
+    // 3. 12 REALISTIC IRANIAN MARKET MEDICINES (built-in offline fallback)
+    var MEDICINES = [
+      {
+        id: 1,
+        faName: 'قرص آزیترومایسین ۲۵۰ میلی‌گرم',
+        enName: 'Azithromycin 250mg Tablet',
+        category: 'antibiotic',
+        form: 'tablet',
+        formLabel: 'قرص روکش‌دار',
+        manufacturer: 'داروسازی عبیدی',
+        packPrice: 48000,
+        unitPrice: 8000,
+        packDesc: 'جعبه ۶ عددی (۱ بلیستر)',
+        unitDesc: 'هر عدد قرص',
+        insuranceRate: 0.70,
+        rxRequired: true,
+        ircCode: '1228044817263501',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 2,
+        faName: 'کپسول آموکسی‌سیلین ۵۰۰ میلی‌گرم',
+        enName: 'Amoxicillin 500mg Capsule',
+        category: 'antibiotic',
+        form: 'capsule',
+        formLabel: 'کپسول خوراکی',
+        manufacturer: 'داروسازی دانا',
+        packPrice: 36000,
+        unitPrice: 1800,
+        packDesc: 'جعبه ۲۰ عددی (۲ بلیستر)',
+        unitDesc: 'هر عدد کپسول',
+        insuranceRate: 0.70,
+        rxRequired: true,
+        ircCode: '1228044817263502',
+        priceTrend: 'up',
+        trendText: '+۱۰٪ تغییر قیمت'
+      },
+      {
+        id: 3,
+        faName: 'قرص استامینوفن ۵۰۰ میلی‌گرم',
+        enName: 'Acetaminophen 500mg Tablet',
+        category: 'analgesic',
+        form: 'tablet',
+        formLabel: 'قرص ساده',
+        manufacturer: 'داروسازی داروپخش',
+        packPrice: 45000,
+        unitPrice: 450,
+        packDesc: 'جعبه ۱۰۰ عددی (۱۰ بلیستر)',
+        unitDesc: 'هر عدد قرص',
+        insuranceRate: 0.00,
+        rxRequired: false,
+        ircCode: '1228044817263503',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 4,
+        faName: 'کپسول نرم ژلوفن ۴۰۰ میلی‌گرم',
+        enName: 'Gelofen (Ibuprofen) 400mg Softgel',
+        category: 'analgesic',
+        form: 'capsule',
+        formLabel: 'کپسول ژلاتینی نرم',
+        manufacturer: 'داروسازی زهراوی',
+        packPrice: 62000,
+        unitPrice: 2066,
+        packDesc: 'جعبه ۳۰ عددی (۳ بلیستر)',
+        unitDesc: 'هر کپسول ژلاتینی',
+        insuranceRate: 0.00,
+        rxRequired: false,
+        ircCode: '1228044817263504',
+        priceTrend: 'up',
+        trendText: '+۱۲٪ افزایش نرخ'
+      },
+      {
+        id: 5,
+        faName: 'قرص لوزارتان پتاسیم ۲۵ میلی‌گرم',
+        enName: 'Losartan Potassium 25mg Tablet',
+        category: 'cardio',
+        form: 'tablet',
+        formLabel: 'قرص روکش‌دار',
+        manufacturer: 'باختر بیوشیمی',
+        packPrice: 33000,
+        unitPrice: 1100,
+        packDesc: 'جعبه ۳۰ عددی (۳ بلیستر)',
+        unitDesc: 'هر عدد قرص',
+        insuranceRate: 0.70,
+        rxRequired: true,
+        ircCode: '1228044817263505',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 6,
+        faName: 'قرص متفورمین هیدروکلراید ۵۰۰',
+        enName: 'Metformin HCl 500mg Tablet',
+        category: 'gastro',
+        form: 'tablet',
+        formLabel: 'قرص خوراکی',
+        manufacturer: 'داروسازی تهران شیمی',
+        packPrice: 58000,
+        unitPrice: 580,
+        packDesc: 'جعبه ۱۰۰ عددی (۱۰ بلیستر)',
+        unitDesc: 'هر عدد قرص',
+        insuranceRate: 0.70,
+        rxRequired: true,
+        ircCode: '1228044817263506',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 7,
+        faName: 'کپسول امپرازول ۲۰ میلی‌گرم',
+        enName: 'Omeprazole 20mg Delayed-Release',
+        category: 'gastro',
+        form: 'capsule',
+        formLabel: 'کپسول پلت روده‌ای',
+        manufacturer: 'سبحان دارو',
+        packPrice: 42000,
+        unitPrice: 1500,
+        packDesc: 'قوطی ۲۸ عددی',
+        unitDesc: 'هر عدد کپسول',
+        insuranceRate: 0.70,
+        rxRequired: true,
+        ircCode: '1228044817263507',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 8,
+        faName: 'قرص آتورواستاتین ۲۰ میلی‌گرم',
+        enName: 'Atorvastatin 20mg Tablet',
+        category: 'cardio',
+        form: 'tablet',
+        formLabel: 'قرص روکش‌دار',
+        manufacturer: 'داروسازی رازک',
+        packPrice: 49000,
+        unitPrice: 1633,
+        packDesc: 'جعبه ۳۰ عددی (۳ بلیستر)',
+        unitDesc: 'هر عدد قرص',
+        insuranceRate: 0.70,
+        rxRequired: true,
+        ircCode: '1228044817263508',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 9,
+        faName: 'شربت دیفن‌هیدرامین کامپاند ۶۰ml',
+        enName: 'Diphenhydramine Compound Syrup',
+        category: 'analgesic',
+        form: 'syrup',
+        formLabel: 'شربت خوراکی',
+        manufacturer: 'داروسازی البرز دارو',
+        packPrice: 28000,
+        unitPrice: 28000,
+        packDesc: 'شیشه ۶۰ میلی‌لیتر',
+        unitDesc: 'هر شیشه کامل',
+        insuranceRate: 0.70,
+        rxRequired: false,
+        ircCode: '1228044817263509',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 10,
+        faName: 'کپسول سافت‌ژل ویتامین D3 ۵۰۰۰۰',
+        enName: 'Vitamin D3 50,000 IU Softgel',
+        category: 'supplement',
+        form: 'capsule',
+        formLabel: 'کپسول نرم خوراکی',
+        manufacturer: 'داروسازی زهراوی',
+        packPrice: 75000,
+        unitPrice: 1500,
+        packDesc: 'قوطی ۵۰ عددی',
+        unitDesc: 'هر کپسول نرم',
+        insuranceRate: 0.00,
+        rxRequired: false,
+        ircCode: '1228044817263510',
+        priceTrend: 'up',
+        trendText: '+۱۵٪ افزایش نرخ'
+      },
+      {
+        id: 11,
+        faName: 'قرص ستیریزین هیدروکلراید ۱۰mg',
+        enName: 'Cetirizine HCl 10mg Tablet',
+        category: 'analgesic',
+        form: 'tablet',
+        formLabel: 'قرص روکش‌دار',
+        manufacturer: 'داروسازی پارس دارو',
+        packPrice: 29000,
+        unitPrice: 966,
+        packDesc: 'جعبه ۳۰ عددی (۳ بلیستر)',
+        unitDesc: 'هر عدد قرص',
+        insuranceRate: 0.70,
+        rxRequired: false,
+        ircCode: '1228044817263511',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      },
+      {
+        id: 12,
+        faName: 'ویال سفتتریاکسون ۱ گرم تزریقی',
+        enName: 'Ceftriaxone 1g Powder Vial',
+        category: 'antibiotic',
+        form: 'ampoule',
+        formLabel: 'ویال پودر تزریقی',
+        manufacturer: 'داروسازی اکسیر',
+        packPrice: 64000,
+        unitPrice: 64000,
+        packDesc: 'ویال تک‌عددی استریل ۱ گرم',
+        unitDesc: 'هر عدد ویال',
+        insuranceRate: 0.70,
+        rxRequired: true,
+        ircCode: '1228044817263512',
+        priceTrend: 'stable',
+        trendText: 'بدون تغییر نرخ'
+      }
+    ];
+
+    // 4. APPLICATION STATE (persisted in localStorage)
+    var API_BASE = 'https://daroyab-api.erfan-api.workers.dev'; // live Worker (deployed)
+    var LS_KEYS = { saved: 'daroyab.savedIds', theme: 'daroyab.theme', cache: 'daroyab.medicinesCache' };
+
+    function isNative() {
+      // Capacitor WebView / Android WebView detection
+      return !!(window.Capacitor && window.Capacitor.isNativePlatform) ||
+             /; wv\)/.test(navigator.userAgent); // Android WebView UA
+    }
+
+    function lsGet(key, fallback) {
+      try { var v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); }
+      catch { return fallback; }
+    }
+    function lsSet(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    }
+
+    var state = {
+      activeTab: 'home',
+      selectedCategory: 'all',
+      searchQuery: '',
+      savedIds: lsGet(LS_KEYS.saved, [1, 3, 5, 8]),
+      activeDetailDrugId: null
+    };
+
+    // restore theme
+    (function restoreTheme() {
+      var t = lsGet(LS_KEYS.theme, null);
+      if (t === 'dark') { document.documentElement.classList.add('dark'); document.documentElement.classList.remove('light'); }
+      else if (t === 'light') { document.documentElement.classList.add('light'); document.documentElement.classList.remove('dark'); }
+    })();
+
+    // 4b. LIVE BACKEND FETCH + OFFLINE CACHE + FALLBACK
+    var searchDebounceTimer = null;
+    var liveMedicines = null; // null = not loaded, [] = loaded-empty/failed
+
+    function skeletonCards(n) {
+      var card = '<div class="p-3 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/90 dark:border-white/[0.08] flex items-center gap-3 animate-pulse">'
+        + '<div class="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-700 shrink-0"></div>'
+        + '<div class="flex-1 space-y-2"><div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>'
+        + '<div class="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>'
+        + '<div class="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div></div>'
+        + '<div class="w-16 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 shrink-0"></div></div>';
+      return Array(n).fill(card).join('');
+    }
+
+    function showSkeleton() {
+      var container = document.getElementById('medicine-list');
+      container.innerHTML = skeletonCards(6);
+    }
+
+    async function fetchMedicines(query) {
+      // network-first with cache fallback, then built-in MEDICINES
+      var url = API_BASE + '/api/medicines?category=' + encodeURIComponent(state.selectedCategory);
+      if (query) url += '&q=' + encodeURIComponent(query);
+
+      try {
+        var ctrl = new AbortController();
+        var t = setTimeout(function () { ctrl.abort(); }, 8000);
+        var res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(t);
+        var data = await res.json();
+        if (data.ok && Array.isArray(data.medicines) && data.medicines.length > 0) {
+          liveMedicines = data.medicines;
+          lsSet(LS_KEYS.cache, { ts: Date.now(), medicines: data.medicines });
+          return data.medicines;
+        }
+        throw new Error('empty');
+      } catch (e) {
+        // offline → localStorage cache → built-in fallback
+        var cached = lsGet(LS_KEYS.cache, null);
+        if (cached && Array.isArray(cached.medicines) && cached.medicines.length) {
+          return cached.medicines.filter(med => matchFilter(med, query));
+        }
+        return MEDICINES.filter(med => matchFilter(med, query));
+      }
+    }
+
+    function matchFilter(med, query) {
+      var matchesCat = state.selectedCategory === 'all' || med.category === state.selectedCategory;
+      var q = (query || '').toLowerCase();
+      var matchesQuery = !q ||
+        med.faName.toLowerCase().includes(q) ||
+        med.enName.toLowerCase().includes(q) ||
+        (med.manufacturer || '').toLowerCase().includes(q) ||
+        (med.ircCode || '').includes(q);
+      return matchesCat && matchesQuery;
+    }
+
+    function handleSearchDebounced(value) {
+      handleSearch(value);
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(async function () {
+        showSkeleton();
+        var results = await fetchMedicines(state.searchQuery);
+        renderMedicineListFrom(results);
+      }, 300);
+    }
+
+    function currentDataset() {
+      return (liveMedicines && liveMedicines.length) ? liveMedicines : MEDICINES;
+    }
+
+    // 5. VECTOR DOSAGE FORM ICONS
+    function getDosageFormBadge(form) {
+      switch (form) {
+        case 'tablet':
+          return {
+            bg: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+            svg: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>`
+          };
+        case 'capsule':
+          return {
+            bg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+            svg: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.5 20.5L3.5 13.5C1.5 11.5 1.5 8 3.5 6C5.5 4 9 4 11 6L18 13C20 15 20 18.5 18 20.5C16 22.5 12.5 22.5 10.5 20.5Z"/><path d="M7 17L14.5 9.5"/></svg>`
+          };
+        case 'syrup':
+          return {
+            bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+            svg: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3h6v3H9z"/><path d="M10 6v3a4 4 0 01-2 3.46V20a2 2 0 002 2h4a2 2 0 002-2v-7.54A4 4 0 0114 9V6"/><path d="M8 15h8"/></svg>`
+          };
+        case 'ampoule':
+          return {
+            bg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+            svg: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/></svg>`
+          };
+        default:
+          return {
+            bg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+            svg: `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>`
+          };
+      }
+    }
+
+    // 6. RENDER CATEGORIES
+    function renderCategories() {
+      const container = document.getElementById('category-chips');
+      container.innerHTML = CATEGORIES.map(cat => {
+        const isSelected = state.selectedCategory === cat.id;
+        return `
+          <button 
+            onclick="selectCategory('${cat.id}')"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 ${
+              isSelected 
+                ? 'bg-teal-600 text-white shadow-md shadow-teal-600/25' 
+                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] hover:border-teal-500/40'
+            }"
+          >
+            ${cat.name}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderMedicineList() { renderMedicineListFrom(currentDataset()); }
+
+    function selectCategory(catId) {
+      state.selectedCategory = catId;
+      renderCategories();
+      showSkeleton();
+      fetchMedicines(state.searchQuery).then(function (results) {
+        renderMedicineListFrom(results);
+      });
+    }
+
+    // 7. SEARCH FILTERING
+    function handleSearch(query) {
+      state.searchQuery = query.trim();
+      const clearBtn = document.getElementById('clear-search-btn');
+      if (state.searchQuery.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      renderMedicineList();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      state.searchQuery = '';
+      document.getElementById('clear-search-btn').classList.add('hidden');
+      renderMedicineList();
+      input.focus();
+    }
+
+    // 8. RENDER MEDICINE PRICE CARDS (data-driven; dataset passed or fallback)
+    function renderMedicineListFrom(dataset) {
+      const container = document.getElementById('medicine-list');
+      const countEl = document.getElementById('results-count');
+
+      const filtered = dataset.filter(med => matchFilter(med, state.searchQuery));
+
+      countEl.textContent = `${toPersianNum(filtered.length)} مورد`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="py-12 px-4 text-center bg-white dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-white/10">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-3">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.3-4.3"/>
+              </svg>
+            </div>
+            <p class="text-xs font-bold text-slate-700 dark:text-slate-200">دارویی با این مشخصات یافت نشد</p>
+            <p class="text-[11px] text-slate-400 mt-1">نام ژنریک، برند یا کد IRC دیگری را جستجو کنید</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(med => {
+        const iconStyle = getDosageFormBadge(med.form);
+        const isSaved = state.savedIds.includes(med.id);
+        const insPercent = Math.round(med.insuranceRate * 100);
+
+        return `
+          <div 
+            onclick="openDetailSheet(${med.id})"
+            class="group relative p-3 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/90 dark:border-white/[0.08] shadow-sm hover:border-teal-500/40 active:scale-[0.98] transition-all duration-150 cursor-pointer flex items-center justify-between gap-2.5"
+          >
+            <!-- Right: Vector Dosage Form Icon -->
+            <div class="w-12 h-12 rounded-2xl border ${iconStyle.bg} flex items-center justify-center shrink-0">
+              ${iconStyle.svg}
+            </div>
+
+            <!-- Center: Names & Manufacturer -->
+            <div class="flex-1 min-w-0">
+              <h3 class="text-[13px] font-black text-slate-800 dark:text-slate-100 truncate leading-snug">
+                ${med.faName}
+              </h3>
+              <p class="text-[10px] font-mono text-slate-400 truncate mt-0.5" dir="ltr" style="text-align: right;">
+                ${med.enName}
+              </p>
+              <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300">
+                  ${med.manufacturer}
+                </span>
+                ${
+                  insPercent > 0 
+                    ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">پوشش بیمه: ${toPersianNum(insPercent)}٪</span>`
+                    : `<span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">آزاد / غیربیمه‌ای</span>`
+                }
+              </div>
+            </div>
+
+            <!-- Left: Price & Bookmark -->
+            <div class="flex flex-col items-end justify-between shrink-0 pl-0.5 gap-2">
+              <div class="text-left">
+                <div class="text-sm font-black text-teal-700 dark:text-teal-300 tracking-tight">
+                  ${formatPrice(med.packPrice)}
+                  <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400">تومان</span>
+                </div>
+                <span class="block text-[9px] text-slate-400 dark:text-slate-500">${med.packDesc}</span>
+              </div>
+
+              <button 
+                onclick="event.stopPropagation(); toggleSaveMedicine(${med.id})"
+                class="w-7 h-7 rounded-xl flex items-center justify-center transition-all active:scale-90 ${
+                  isSaved 
+                    ? 'bg-teal-500/15 text-teal-600 dark:text-teal-300 border border-teal-500/30' 
+                    : 'bg-slate-100 dark:bg-slate-700/60 text-slate-400 hover:text-teal-600'
+                }"
+                title="${isSaved ? 'حذف از نشان‌شده‌ها' : 'نشان کردن دارو'}"
+              >
+                <svg class="w-3.5 h-3.5" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 9. DETAIL BOTTOM SHEET
+    function openDetailSheet(drugId) {
+      const med = MEDICINES.find(m => m.id === drugId);
+      if (!med) return;
+      state.activeDetailDrugId = drugId;
+
+      const iconStyle = getDosageFormBadge(med.form);
+      const isSaved = state.savedIds.includes(med.id);
+      const insPercent = Math.round(med.insuranceRate * 100);
+      const patientSharePrice = Math.round(med.packPrice * (1 - med.insuranceRate));
+
+      const contentEl = document.getElementById('detail-sheet-content');
+      contentEl.innerHTML = `
+        <!-- Top Row -->
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-2xl border ${iconStyle.bg} flex items-center justify-center shrink-0">
+              ${iconStyle.svg}
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-300">${med.formLabel}</span>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">${med.manufacturer}</span>
+              </div>
+              <h2 class="text-base font-black text-slate-900 dark:text-white mt-1 leading-snug">${med.faName}</h2>
+              <p class="text-xs font-mono text-slate-400 mt-0.5" dir="ltr" style="text-align: right;">${med.enName}</p>
+            </div>
+          </div>
+
+          <!-- Bookmark Button -->
+          <button 
+            onclick="toggleSaveMedicine(${med.id})"
+            class="w-10 h-10 rounded-2xl border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0 active:scale-90 transition-all ${
+              isSaved ? 'bg-teal-500/15 text-teal-600 dark:text-teal-300 border-teal-500/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-400'
+            }"
+            title="نشان کردن دارو"
+          >
+            <svg class="w-5 h-5" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- IRC Code Bar -->
+        <div class="p-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/70 dark:border-white/[0.06] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">کد رهگیری IRC:</span>
+            <span class="text-xs font-mono font-semibold text-slate-800 dark:text-slate-200 tracking-wider">${med.ircCode}</span>
+          </div>
+          <button 
+            onclick="copyText('${med.ircCode}', 'کد اصالت IRC کپی شد')"
+            class="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-700 text-[11px] font-bold text-teal-600 dark:text-teal-300 shadow-sm active:scale-95 transition-all flex items-center gap-1"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span>کپی کد</span>
+          </button>
+        </div>
+
+        <!-- Side-by-Side Price Breakdown -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <!-- Free Market Price -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-white/[0.08]">
+            <span class="block text-[11px] font-bold text-slate-500 dark:text-slate-400">قیمت آزاد (مصرف‌کننده)</span>
+            <div class="mt-1.5 flex items-baseline gap-1">
+              <span class="text-lg font-black text-slate-800 dark:text-white">${formatPrice(med.packPrice)}</span>
+              <span class="text-[11px] font-bold text-slate-500">تومان</span>
+            </div>
+            <span class="block text-[10px] text-slate-400 mt-1">نرخ رسمی بدون بیمه</span>
+          </div>
+
+          <!-- Patient Share with Insurance -->
+          <div class="p-3.5 rounded-2xl bg-gradient-to-br from-teal-500/10 to-emerald-500/15 border border-teal-500/30">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-teal-800 dark:text-teal-300">سهم بیمار با بیمه</span>
+              <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-teal-600 text-white">${toPersianNum(insPercent)}٪</span>
+            </div>
+            <div class="mt-1.5 flex items-baseline gap-1">
+              <span class="text-lg font-black text-teal-700 dark:text-emerald-300">${formatPrice(patientSharePrice)}</span>
+              <span class="text-[11px] font-bold text-teal-600 dark:text-teal-400">تومان</span>
+            </div>
+            <span class="block text-[10px] text-teal-700/80 dark:text-teal-300/80 mt-1">تامین اجتماعی / سلامت</span>
+          </div>
+        </div>
+
+        <!-- Packaging & Prescription Info -->
+        <div class="rounded-2xl border border-slate-200 dark:border-white/[0.08] divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-800/40">
+          <div class="px-3.5 py-2.5 flex items-center justify-between text-xs">
+            <span class="text-slate-500 dark:text-slate-400 font-medium">قیمت واحد (${med.unitDesc}):</span>
+            <span class="font-bold text-slate-800 dark:text-slate-100">${formatPrice(med.unitPrice)} تومان</span>
+          </div>
+          <div class="px-3.5 py-2.5 flex items-center justify-between text-xs">
+            <span class="text-slate-500 dark:text-slate-400 font-medium">قیمت بسته کامل (${med.packDesc}):</span>
+            <span class="font-bold text-slate-800 dark:text-slate-100">${formatPrice(med.packPrice)} تومان</span>
+          </div>
+          <div class="px-3.5 py-2.5 flex items-center justify-between text-xs">
+            <span class="text-slate-500 dark:text-slate-400 font-medium">وضعیت تحویل در داروخانه:</span>
+            <span class="font-bold ${med.rxRequired ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}">
+              ${med.rxRequired ? 'نیازمند نسخه پزشک (Rx)' : 'تحویل بدون نسخه (OTC)'}
+            </span>
+          </div>
+        </div>
+
+        <!-- Primary Action Buttons -->
+        <div class="pt-1 flex items-center gap-2.5">
+          <button 
+            onclick="toggleSaveMedicine(${med.id})"
+            class="flex-1 py-3.5 px-4 rounded-2xl bg-gradient-to-l from-[#0D9488] to-[#10B981] text-white font-black text-xs shadow-float active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+            </svg>
+            <span>${isSaved ? 'حذف از داروهای من' : 'نشان کردن و ذخیره دارو'}</span>
+          </button>
+          <button 
+            onclick="closeDetailSheet()"
+            class="py-3.5 px-5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs active:scale-95 transition-all"
+          >
+            بستن
+          </button>
+        </div>
+      `;
+
+      const backdrop = document.getElementById('detail-backdrop');
+      const sheet = document.getElementById('detail-sheet');
+      backdrop.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        backdrop.classList.remove('opacity-0');
+        sheet.classList.remove('sheet-exit');
+        sheet.classList.add('sheet-enter');
+      });
+    }
+
+    function closeDetailSheet() {
+      const backdrop = document.getElementById('detail-backdrop');
+      const sheet = document.getElementById('detail-sheet');
+      backdrop.classList.add('opacity-0');
+      sheet.classList.remove('sheet-enter');
+      sheet.classList.add('sheet-exit');
+      setTimeout(() => {
+        backdrop.classList.add('hidden');
+      }, 280);
+    }
+
+    // 10. SAVED / BOOKMARKS LOGIC
+    function toggleSaveMedicine(drugId) {
+      const idx = state.savedIds.indexOf(drugId);
+      const med = MEDICINES.find(m => m.id === drugId);
+      if (idx > -1) {
+        state.savedIds.splice(idx, 1);
+        showToast(`«${med.faName}» از داروهای من حذف شد`);
+      } else {
+        state.savedIds.push(drugId);
+        showToast(`«${med.faName}» در داروهای من ذخیره شد`);
+      }
+      lsSet(LS_KEYS.saved, state.savedIds);
+      updateAllViews();
+      if (state.activeDetailDrugId === drugId) {
+        openDetailSheet(drugId);
+      }
+    }
+
+    function renderSavedMedicines() {
+      const container = document.getElementById('saved-medicines-list');
+      const savedBadge = document.getElementById('nav-saved-badge');
+      savedBadge.textContent = toPersianNum(state.savedIds.length);
+
+      if (state.savedIds.length === 0) {
+        container.innerHTML = `
+          <div class="py-12 px-4 text-center bg-white dark:bg-slate-800/50 rounded-3xl border border-dashed border-slate-200 dark:border-white/10">
+            <p class="text-xs font-bold text-slate-700 dark:text-slate-200">هنوز دارویی نشان نکرده‌اید</p>
+            <p class="text-[11px] text-slate-400 mt-1">با زدن دکمه نشان در کنار هر دارو، آن را در این بخش ذخیره کنید</p>
+          </div>
+        `;
+        return;
+      }
+
+      const savedList = MEDICINES.filter(m => state.savedIds.includes(m.id));
+      container.innerHTML = savedList.map(med => {
+        const iconStyle = getDosageFormBadge(med.form);
+        const isUp = med.priceTrend === 'up';
+
+        return `
+          <div 
+            onclick="openDetailSheet(${med.id})"
+            class="p-3.5 rounded-2xl bg-white dark:bg-slate-800/70 border border-slate-200/90 dark:border-white/[0.08] flex items-center justify-between gap-3 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-11 h-11 rounded-2xl border ${iconStyle.bg} flex items-center justify-center shrink-0">
+                ${iconStyle.svg}
+              </div>
+              <div class="min-w-0">
+                <h4 class="text-xs font-black text-slate-800 dark:text-white truncate">${med.faName}</h4>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <span class="text-[11px] font-black text-teal-600 dark:text-teal-400">${formatPrice(med.packPrice)} تومان</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                    isUp 
+                      ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20' 
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  }">
+                    ${med.trendText}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button 
+                onclick="event.stopPropagation(); toggleSaveMedicine(${med.id})"
+                class="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 flex items-center justify-center active:scale-90 transition-all"
+                title="حذف از نشان‌شده‌ها"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 11. NAVIGATION TAB SWITCHING
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      const views = ['home', 'saved'];
+      views.forEach(v => {
+        const section = document.getElementById(`view-${v}`);
+        const btn = document.getElementById(`nav-${v}`);
+        if (v === tabId) {
+          section.classList.remove('hidden');
+          btn.className = 'nav-btn relative flex-1 h-12 rounded-2xl flex items-center justify-center gap-2 text-teal-600 dark:text-teal-400 bg-teal-500/10 font-bold transition-all active:scale-95';
+        } else {
+          section.classList.add('hidden');
+          btn.className = 'nav-btn relative flex-1 h-12 rounded-2xl flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 font-medium transition-all active:scale-95';
+        }
+      });
+      updateAllViews();
+    }
+
+    // 12. DARK / LIGHT THEME TOGGLE (persisted)
+    function toggleTheme() {
+      const htmlEl = document.documentElement;
+      if (htmlEl.classList.contains('dark')) {
+        htmlEl.classList.remove('dark');
+        htmlEl.classList.add('light');
+        lsSet(LS_KEYS.theme, 'light');
+      } else {
+        htmlEl.classList.remove('light');
+        htmlEl.classList.add('dark');
+        lsSet(LS_KEYS.theme, 'dark');
+      }
+    }
+
+    // 13b. NATIVE WEBVIEW PREP: strip desktop bezel, fill real screen
+    function applyNativeLayout() {
+      if (!isNative()) return;
+      document.getElementById('device-frame').className =
+        'relative w-full h-screen bg-[#F8FAFC] dark:bg-[#0B0F19] overflow-hidden flex flex-col transition-all duration-300';
+      var sb = document.getElementById('fake-statusbar');
+      if (sb) sb.classList.add('hidden');
+      document.body.className = document.body.className.replace('bg-slate-200 dark:bg-slate-950 flex items-center justify-center min-h-screen sm:p-4', 'bg-[#F8FAFC] dark:bg-[#0B0F19]');
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {
+        try {
+          var dark = document.documentElement.classList.contains('dark');
+          window.Capacitor.Plugins.StatusBar.setBackgroundColor({ color: dark ? '#0B0F19' : '#0D9488' });
+        } catch (e) {}
+      }
+    }
+
+    // 13c. ANDROID HARDWARE BACK BUTTON
+    function setupBackButton() {
+      var handler = function () {
+        var sheetOpen = !document.getElementById('detail-sheet').classList.contains('sheet-exit')
+                        && !document.getElementById('detail-backdrop').classList.contains('hidden');
+        if (sheetOpen) { closeDetailSheet(); return; }
+        if (state.activeTab !== 'home') { switchTab('home'); return; }
+        // nothing to close: move app to background (default behavior)
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+          window.Capacitor.Plugins.App.exitApp();
+        }
+      };
+      document.addEventListener('backbutton', handler, false); // Cordova-style
+      if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
+        window.Capacitor.Plugins.App.addListener('backButton', handler);
+      }
+      window.addEventListener('keydown', function (e) { if (e.key === 'Escape') handler(); });
+    }
+
+    // 13. CLIPBOARD & TOAST HELPERS
+    function copyText(text, successMsg) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast(successMsg);
+      } catch (e) {
+        showToast('کپی انجام شد');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const msgEl = document.getElementById('toast-message');
+      msgEl.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-4');
+      }, 2400);
+    }
+
+    function updateAllViews() {
+      renderMedicineList();
+      renderSavedMedicines();
+    }
+
+    // 14. INITIALIZE APPLICATION ON LOAD
+    window.onload = function() {
+      applyNativeLayout();
+      setupBackButton();
+      renderCategories();
+      updateAllViews();
+      // initial live load (skeleton while fetching)
+      showSkeleton();
+      fetchMedicines('').then(function (results) {
+        renderMedicineListFrom(results);
+      });
+    };
+  </script>
+</body>
+</html>
