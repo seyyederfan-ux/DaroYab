@@ -147,7 +147,7 @@
 
       <!-- Left Actions: Live Sync Status + Theme Toggle -->
       <div class="flex items-center gap-2">
-        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold">
+        <div onclick="ttacDebug()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold cursor-pointer">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 live-dot"></span>
           <span>بروزرسانی: امروز</span>
         </div>
@@ -666,11 +666,26 @@
       };
     }
 
+    var TTAC_DEBUG = { status: null, len: null, head: '', url: '', error: '' };
+    window.ttacDebug = function () {
+      alert('TTAC Debug:\nURL: ' + TTAC_DEBUG.url + '\nStatus: ' + TTAC_DEBUG.status + '\nLength: ' + TTAC_DEBUG.len + '\nError: ' + TTAC_DEBUG.error + '\nHead: ' + TTAC_DEBUG.head);
+    };
+
     async function fetchFromTtac(query) {
       if (!query || query.length < 2) return [];
       var url = TTAC_SEARCH + '?Term=' + encodeURIComponent(query) + '&PageNumber=1&PageSize=30';
-      var resp = await nativeHttp(url);
-      var htmlStr = typeof resp.data === 'string' ? resp.data : '';
+      TTAC_DEBUG = { status: null, len: null, head: '', url: url, error: '' };
+      var resp;
+      try {
+        resp = await nativeHttp(url);
+      } catch (e) {
+        TTAC_DEBUG.error = 'EXC: ' + (e && (e.message || JSON.stringify(e).slice(0, 200)));
+        return [];
+      }
+      TTAC_DEBUG.status = resp.status;
+      var htmlStr = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data).slice(0, 500);
+      TTAC_DEBUG.len = htmlStr.length;
+      TTAC_DEBUG.head = htmlStr.slice(0, 300);
       if (!htmlStr || resp.status !== 200) return [];
       var doc = new DOMParser().parseFromString(htmlStr, 'text/html');
       var rows = doc.querySelectorAll('.RowSearchSty');
