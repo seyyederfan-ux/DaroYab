@@ -628,7 +628,7 @@
     // REAL endpoints (verified from open-source scrapers of irc.fda.gov.ir):
     //   Search: /nfi/Search?Term=X&PageNumber=1&PageSize=50   (HTML, .RowSearchSty rows)
     //   Row: .titleSearch-Link-RtlAlter a = fa name + /NFI/Detail/{id}, .titleSearch-Link-ltrAlter a = en, .priceTxt = price (Rial)
-    var TTAC_SEARCH = 'https://irc.fda.gov.ir/nfi/Search';
+    var TTAC_HOSTS = ['http://irc.fda.gov.ir/nfi/Search', 'https://irc.fda.gov.ir/nfi/Search'];
 
     function nativeHttp(url, opts) {
       opts = opts || {};
@@ -673,19 +673,26 @@
 
     async function fetchFromTtac(query) {
       if (!query || query.length < 2) return [];
-      var url = TTAC_SEARCH + '?Term=' + encodeURIComponent(query) + '&PageNumber=1&PageSize=30';
-      TTAC_DEBUG = { status: null, len: null, head: '', url: url, error: '' };
-      var resp;
-      try {
-        resp = await nativeHttp(url);
-      } catch (e) {
-        TTAC_DEBUG.error = 'EXC: ' + (e && (e.message || JSON.stringify(e).slice(0, 200)));
-        return [];
+      var qs = '?Term=' + encodeURIComponent(query) + '&PageNumber=1&PageSize=30';
+      TTAC_DEBUG = { status: null, len: null, head: '', url: '', error: '' };
+      var resp = null;
+      for (var i = 0; i < TTAC_HOSTS.length; i++) {
+        var url = TTAC_HOSTS[i] + qs;
+        try {
+          resp = await nativeHttp(url);
+          TTAC_DEBUG.url = url;
+          TTAC_DEBUG.status = resp.status;
+          var t = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data).slice(0, 500);
+          TTAC_DEBUG.len = t.length;
+          TTAC_DEBUG.head = t.slice(0, 300);
+          if (resp.status === 200 && t && t.length > 500) break; // plausible page
+        } catch (e) {
+          TTAC_DEBUG.error += '[' + (i === 0 ? 'http' : 'https') + '] ' + (e && (e.message || String(e)).slice(0, 150)) + ' ';
+          resp = null;
+        }
       }
-      TTAC_DEBUG.status = resp.status;
-      var htmlStr = typeof resp.data === 'string' ? resp.data : JSON.stringify(resp.data).slice(0, 500);
-      TTAC_DEBUG.len = htmlStr.length;
-      TTAC_DEBUG.head = htmlStr.slice(0, 300);
+      if (!resp) return [];
+      var htmlStr = typeof resp.data === 'string' ? resp.data : '';
       if (!htmlStr || resp.status !== 200) return [];
       var doc = new DOMParser().parseFromString(htmlStr, 'text/html');
       var rows = doc.querySelectorAll('.RowSearchSty');
